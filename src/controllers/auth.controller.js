@@ -3,7 +3,6 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
-// ✅ Modified SIGNUP controller
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
 
@@ -22,20 +21,16 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // ✅ Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
+    // ❌ DO NOT hash password manually here
     const newUser = new User({
       fullName,
       email,
-      password: hashedPassword,
+      password,    // 🔥 Raw password
     });
 
     if (newUser) {
       generateToken(newUser._id, res);
-      await newUser.save();
-      
+      await newUser.save(); // Password will be hashed automatically here
 
       return res.status(201).json({
         _id: newUser._id,
