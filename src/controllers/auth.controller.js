@@ -3,16 +3,6 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
-const sendToken = (user, res) => {
-  const token = generateToken(user._id);
-
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: true,         
-    sameSite: "None",     
-  });
-};
-
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
 
@@ -34,7 +24,7 @@ export const signup = async (req, res) => {
 
     if (newUser) {
       await newUser.save();
-      sendToken(newUser, res); 
+      generateToken(newUser._id, res); // pass res for cookie
 
       return res.status(201).json({
         _id: newUser._id,
@@ -65,7 +55,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    sendToken(user, res); 
+    generateToken(user._id, res); // pass res for cookie
 
     res.status(200).json({
       _id: user._id,
