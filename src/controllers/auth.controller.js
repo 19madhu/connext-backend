@@ -3,6 +3,16 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
+const sendToken = (user, res) => {
+  const token = generateToken(user._id);
+
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: true,         
+    sameSite: "None",     
+  });
+};
+
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
 
@@ -15,22 +25,16 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
-    // ✅ Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // ❌ DO NOT hash password manually here
-    const newUser = new User({
-      fullName,
-      email,
-      password,    // 🔥 Raw password
-    });
+    const newUser = new User({ fullName, email, password });
 
     if (newUser) {
-      generateToken(newUser._id, res);
-      await newUser.save(); // Password will be hashed automatically here
+      await newUser.save();
+      sendToken(newUser, res); 
 
       return res.status(201).json({
         _id: newUser._id,
@@ -47,7 +51,6 @@ export const signup = async (req, res) => {
   }
 };
 
-// ✅ Leave LOGIN logic as-is
 export const login = async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -62,7 +65,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    generateToken(user._id, res);
+    sendToken(user, res); 
 
     res.status(200).json({
       _id: user._id,
@@ -76,10 +79,14 @@ export const login = async (req, res) => {
   }
 };
 
-// ✅ Leave LOGOUT logic as-is
 export const logout = (req, res) => {
   try {
-    res.cookie("jwt", "", { maxAge: 0 });
+    res.cookie("token", "", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 0,
+    });
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.log("Error in logout controller", error.message);
@@ -87,7 +94,6 @@ export const logout = (req, res) => {
   }
 };
 
-// ✅ Leave PROFILE UPDATE logic as-is
 export const updateProfile = async (req, res) => {
   try {
     const { profilePic } = req.body;
@@ -111,7 +117,6 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// ✅ Leave AUTH CHECK logic as-is
 export const checkAuth = (req, res) => {
   try {
     res.status(200).json(req.user);
